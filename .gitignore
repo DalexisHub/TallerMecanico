@@ -1,0 +1,24 @@
+# .NET build output
+**/bin/
+**/obj/
+
+# Editor and user-specific files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.rsuser
+*.sln.docstates
+.DS_Store
+
+# Local configuration and credentials
+.env
+.env.*
+!*.env.example
+**/appsettings.*.json
+**/secrets.json
+*.pfx
+*.p12
+*.pem
+*.key

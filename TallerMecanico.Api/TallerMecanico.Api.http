@@ -1,0 +1,7 @@
+@base = https://localhost:7166
+
+GET {{base}}/api/clientes
+###
+GET {{base}}/api/vehiculos
+###
+GET {{base}}/swagger/v1/swagger.json
