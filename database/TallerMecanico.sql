@@ -41,3 +41,13 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Vehiculos WHERE Placa = N'LAB13-ABC')
     INSERT dbo.Vehiculos (Placa, Marca, Modelo, Anio, ClienteId)
     SELECT N'LAB13-ABC', N'Toyota', N'Corolla', 2020, Id FROM dbo.Clientes WHERE Documento = N'LAB13-001';
 GO
+
+IF OBJECT_ID(N'dbo.Usuarios', N'U') IS NULL
+BEGIN
+ CREATE TABLE dbo.Usuarios (Id int IDENTITY PRIMARY KEY, Correo nvarchar(254) NOT NULL, ClaveHash nvarchar(100) NOT NULL, Rol nvarchar(30) NOT NULL);
+ CREATE UNIQUE INDEX UX_Usuarios_Correo ON dbo.Usuarios(Correo);
+END;
+GO
+-- Registrar dos usuarios mediante la API; después asignar el segundo rol:
+-- UPDATE dbo.Usuarios SET Rol = N'JefeTaller' WHERE Correo = N'jefe@example.test';
+-- El usuario restante conserva el rol Recepcionista asignado por el servidor.

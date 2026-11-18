@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TallerMecanico.Entidades.Dtos;
 using TallerMecanico.Negocio;
@@ -7,8 +8,10 @@ namespace TallerMecanico.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class VehiculosController(IVehiculoServicio servicio) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(List<VehiculoDto>), 200)]
     [ProducesResponseType(typeof(ValidationProblemDetails), 400)]
@@ -55,6 +58,7 @@ public class VehiculosController(IVehiculoServicio servicio) : ControllerBase
         catch (ReglaNegocioException e) { return Conflict(Problema(e)); }
     }
 
+    [Authorize(Roles = "JefeTaller")]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]

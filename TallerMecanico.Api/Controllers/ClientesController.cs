@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TallerMecanico.Entidades.Dtos;
 using TallerMecanico.Negocio;
@@ -7,8 +8,10 @@ namespace TallerMecanico.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ClientesController(IClienteServicio servicio) : ControllerBase
 {
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(List<ClienteDto>), 200)]
     public async Task<ActionResult<List<ClienteDto>>> Listar() => Ok(await servicio.ListarAsync());
@@ -47,6 +50,7 @@ public class ClientesController(IClienteServicio servicio) : ControllerBase
         catch (ReglaNegocioException e) { return Conflict(Problema(e)); }
     }
 
+    [Authorize(Roles = "JefeTaller")]
     [HttpDelete("{id:int}")]
     [ProducesResponseType(204)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]

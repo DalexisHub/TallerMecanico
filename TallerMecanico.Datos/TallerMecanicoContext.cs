@@ -16,8 +16,11 @@ public partial class TallerMecanicoContext : DbContext
 
     public virtual DbSet<Vehiculo> Vehiculos { get; set; }
 
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Usuario>(entity => { entity.ToTable("Usuarios"); entity.HasIndex(x => x.Correo).IsUnique(); entity.Property(x => x.Correo).HasMaxLength(254).IsRequired(); entity.Property(x => x.ClaveHash).HasMaxLength(100).IsRequired(); entity.Property(x => x.Rol).HasMaxLength(30).IsRequired(); });
         modelBuilder.Entity<Cliente>(entity =>
         {
             entity.HasIndex(e => e.Documento, "UX_Clientes_Documento").IsUnique();
