@@ -1,5 +1,7 @@
 # Taller Mecánico · API
 
+La implementación del Laboratorio 15, con gateway y catálogo de repuestos, está documentada en [README-S15.md](README-S15.md).
+
 ![Portada de la API Taller Mecánico](assets/portada-taller-mecanico.png)
 
 API REST para gestionar clientes y vehículos de un taller mecánico, con autenticación JWT y permisos por rol. Proyecto académico en **.NET 10**, **SQL Server**, **Entity Framework Core**, **AutoMapper** y **BCrypt**.
@@ -52,10 +54,10 @@ Las entidades de clientes y vehículos se generaron a partir de la base de datos
 
    ```bash
    dotnet restore
-   dotnet run --project TallerMecanico.Api --launch-profile https
+   dotnet run --project TallerMecanico.Api --launch-profile http
    ```
 
-5. En desarrollo, abre [Swagger](https://localhost:7166/swagger). Para confiar en el certificado local de desarrollo, usa `dotnet dev-certs https --trust`.
+5. En desarrollo, abre [Swagger](http://localhost:5055/swagger).
 
 ## Autenticación
 
@@ -83,13 +85,13 @@ El registro no acepta un rol enviado por el cliente. La API autoriza según el r
 | `POST /api/Auth/login` | Sí | Sí | Sí |
 | `GET /api/Auth/perfil` | 401 | Sí | Sí |
 | `GET /api/Clientes` | Sí | Sí | Sí |
-| `GET /api/Clientes/{id}` | 401 | Sí | Sí |
+| `GET /api/Clientes/{id}` | Sí | Sí | Sí |
 | `POST /api/Clientes` | 401 | Sí | Sí |
 | `PUT /api/Clientes/{id}` | 401 | Sí | Sí |
 | `DELETE /api/Clientes/{id}` | 401 | 403 | Sí |
-| `GET /api/Clientes/{clienteId}/vehiculos` | 401 | Sí | Sí |
+| `GET /api/Clientes/{clienteId}/vehiculos` | Sí | Sí | Sí |
 | `GET /api/Vehiculos` | Sí | Sí | Sí |
-| `GET /api/Vehiculos/{id}` | 401 | Sí | Sí |
+| `GET /api/Vehiculos/{id}` | Sí | Sí | Sí |
 | `POST /api/Vehiculos` | 401 | Sí | Sí |
 | `PUT /api/Vehiculos/{id}` | 401 | Sí | Sí |
 | `DELETE /api/Vehiculos/{id}` | 401 | 403 | Sí |

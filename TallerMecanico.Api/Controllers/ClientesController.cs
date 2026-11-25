@@ -16,6 +16,7 @@ public class ClientesController(IClienteServicio servicio) : ControllerBase
     [ProducesResponseType(typeof(List<ClienteDto>), 200)]
     public async Task<ActionResult<List<ClienteDto>>> Listar() => Ok(await servicio.ListarAsync());
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ClienteDto), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]
@@ -61,6 +62,7 @@ public class ClientesController(IClienteServicio servicio) : ControllerBase
         catch (ReglaNegocioException e) { return Conflict(Problema(e)); }
     }
 
+    [AllowAnonymous]
     [HttpGet("{clienteId:int}/vehiculos")]
     [ProducesResponseType(typeof(List<VehiculoDto>), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]

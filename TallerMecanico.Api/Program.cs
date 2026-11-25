@@ -11,6 +11,8 @@ using TallerMecanico.Negocio.Interfaces;
 using TallerMecanico.Negocio.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
+if (int.TryParse(builder.Configuration["PORT"], out var port) && port is > 0 and <= 65535)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOpciones>() ?? new JwtOpciones();
@@ -43,7 +45,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
