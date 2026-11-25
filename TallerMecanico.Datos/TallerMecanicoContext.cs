@@ -20,9 +20,13 @@ public partial class TallerMecanicoContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Usuario>(entity => { entity.ToTable("Usuarios"); entity.HasIndex(x => x.Correo).IsUnique(); entity.Property(x => x.Correo).HasMaxLength(254).IsRequired(); entity.Property(x => x.ClaveHash).HasMaxLength(100).IsRequired(); entity.Property(x => x.Rol).HasMaxLength(30).IsRequired(); });
+        modelBuilder.HasDefaultSchema(Database.IsNpgsql() ? "public" : "dbo");
+        modelBuilder.Entity<Usuario>(entity => { entity.ToTable("Usuarios"); entity.HasKey(x => x.Id); entity.Property(x => x.Id).ValueGeneratedOnAdd(); entity.HasIndex(x => x.Correo, "UX_Usuarios_Correo").IsUnique(); entity.Property(x => x.Correo).HasMaxLength(254).IsRequired(); entity.Property(x => x.ClaveHash).HasMaxLength(100).IsRequired(); entity.Property(x => x.Rol).HasMaxLength(30).IsRequired(); });
         modelBuilder.Entity<Cliente>(entity =>
         {
+            entity.ToTable("Clientes");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.HasIndex(e => e.Documento, "UX_Clientes_Documento").IsUnique();
 
             entity.Property(e => e.Documento).HasMaxLength(20);
@@ -32,6 +36,9 @@ public partial class TallerMecanicoContext : DbContext
 
         modelBuilder.Entity<Vehiculo>(entity =>
         {
+            entity.ToTable("Vehiculos");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).ValueGeneratedOnAdd();
             entity.HasIndex(e => e.ClienteId, "IX_Vehiculos_ClienteId");
 
             entity.HasIndex(e => e.Placa, "UX_Vehiculos_Placa").IsUnique();

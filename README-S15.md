@@ -1,6 +1,6 @@
 # Laboratorio 15 — Microservicios con Ocelot
 
-El cliente entra por `GatewayApi` en `http://localhost:5100`. Ocelot valida el JWT en las rutas protegidas y reenvía las solicitudes a dos procesos independientes. `TallerMecanico.Api` conserva las cuatro capas, SQL Server, las reglas de negocio y la autorización por rol de la semana 14. `RepuestosApi` consulta un catálogo fijo de ocho repuestos en memoria, sin base de datos ni referencias a los proyectos del taller.
+El cliente entra por `GatewayApi` en `http://localhost:5100`. Ocelot valida el JWT en las rutas protegidas y reenvía las solicitudes a dos procesos independientes. `TallerMecanico.Api` conserva las cuatro capas, las reglas de negocio y la autorización por rol de la semana 14. Usa SQL Server en desarrollo local y PostgreSQL de Neon en producción. `RepuestosApi` consulta un catálogo fijo de ocho repuestos en memoria, sin base de datos ni referencias a los proyectos del taller.
 
 ```mermaid
 flowchart LR
@@ -9,7 +9,7 @@ flowchart LR
     G --> R[RepuestosApi :5056]
     T --> N[Negocio]
     N --> D[Datos / EF Core]
-    D --> S[(SQL Server)]
+    D --> S[(SQL Server local / Neon PostgreSQL producción)]
     T --> E[Entidades y DTOs]
     R --> M[(Colección en memoria)]
 ```
@@ -22,7 +22,7 @@ flowchart LR
 
 ## Dependencias y configuración
 
-Los proyectos usan .NET 10. `GatewayApi` agrega Ocelot **25.0.3** y `Microsoft.AspNetCore.Authentication.JwtBearer` **10.0.15**. `RepuestosApi` agrega JwtBearer **10.0.15**. La API original conserva JwtBearer **10.0.***, EF Core SQL Server **10.0.15**, AutoMapper **16.3.0** y BCrypt.Net-Next **4.2.0**.
+Los proyectos usan .NET 10. `GatewayApi` agrega Ocelot **25.0.3** y `Microsoft.AspNetCore.Authentication.JwtBearer` **10.0.15**. `RepuestosApi` agrega JwtBearer **10.0.15**. La API original conserva JwtBearer **10.0.***, EF Core SQL Server **10.0.15**, AutoMapper **16.3.0** y BCrypt.Net-Next **4.2.0**. La capa de datos agrega **Npgsql.EntityFrameworkCore.PostgreSQL 10.0.4** para EF Core 10.
 
 En desarrollo, los tres proyectos comparten el identificador de **User Secrets** `TallerMecanico.Api`; esto permite leer exactamente la misma clave, emisor y audiencia sin copiar secretos ni compartir código. Configure una sola vez:
 
@@ -35,7 +35,7 @@ dotnet user-secrets set "Jwt:Minutos" "60" --project TallerMecanico.Api
 dotnet user-secrets set "ConnectionStrings:TallerMecanico" "<cadena SQL Server>" --project TallerMecanico.Api
 ```
 
-La conexión solo la usa `TallerMecanico.Api`. Para producción, suministre las variables de [`.env.example`](.env.example) como configuración del proveedor; ese archivo es una plantilla y **no contiene credenciales reales**. `Jwt__Clave`, `Jwt__Emisor` y `Jwt__Audiencia` deben ser idénticas en los tres procesos; `Jwt__Minutos` es necesario en la API que emite tokens. `ConnectionStrings__TallerMecanico` solo va en la API original. En los contenedores, `PORT` determina el puerto HTTP y los tres procesos escuchan en `0.0.0.0`; el valor predeterminado del Dockerfile es 8080 y Render suele proporcionar 10000. Fuera de Docker, ASP.NET Core admite también `ASPNETCORE_URLS` y `ASPNETCORE_HTTP_PORTS`.
+La conexión solo la usa `TallerMecanico.Api`. Para producción, suministre las variables de [`.env.example`](.env.example) como configuración del proveedor; ese archivo es una plantilla y **no contiene credenciales reales**. `Jwt__Clave`, `Jwt__Emisor` y `Jwt__Audiencia` deben ser idénticas en los tres procesos; `Jwt__Minutos` es necesario en la API que emite tokens. `ConnectionStrings__TallerMecanico` y `Database__Provider` solo van en la API original. Los valores admitidos de `Database__Provider` son `SqlServer` y `PostgreSQL`; si falta, la API selecciona SQL Server en desarrollo y PostgreSQL en producción. En producción con PostgreSQL, la API impone `SSL Mode=VerifyFull`, que valida la CA y el nombre del host. En los contenedores, `PORT` determina el puerto HTTP y los tres procesos escuchan en `0.0.0.0`; el valor predeterminado del Dockerfile es 8080 y Render suele proporcionar 10000. Fuera de Docker, ASP.NET Core admite también `ASPNETCORE_URLS` y `ASPNETCORE_HTTP_PORTS`.
 
 En producción, `GatewayApi` exige `Downstream__TallerMecanico__Host`, `Downstream__Repuestos__Host` y `Gateway__BaseUrl`. Indique únicamente los nombres DNS de los microservicios, sin `https://` ni puerto, y la URL HTTPS pública completa del gateway. Al arrancar con `ASPNETCORE_ENVIRONMENT=Production`, el gateway sustituye los destinos locales por HTTPS y puerto 443. La configuración base local permanece en `GatewayApi/ocelot.json`. No se han creado dominios ni recursos en la nube.
 
@@ -114,19 +114,21 @@ docker build -f GatewayApi/Dockerfile -t gateway-s15 .
 
 `ocelot.json` se copia al directorio publicado `/app` del contenedor del gateway. `.dockerignore` excluye los archivos locales `appsettings.*.json`, secretos, `.env*`, `evidencias-api/` y salidas `bin`/`obj`; `appsettings.json` básico sí se incluye. `.gitignore` excluye `evidencias-api/` para evitar incorporarla con `git add .`.
 
-### Azure SQL Database
+### Neon PostgreSQL
 
-1. Cree **por separado** una Azure SQL Database llamada `TallerMecanico`. Conéctese directamente a esa base y ejecute [`database/TallerMecanico.Azure.sql`](database/TallerMecanico.Azure.sql) en Azure Data Studio, SSMS o `sqlcmd`. El script comprueba el nombre de la base antes de escribir y replica las tablas y los dos registros de ejemplo de forma idempotente. El script local [`database/TallerMecanico.sql`](database/TallerMecanico.sql) permanece intacto. La variante Azure omite `CREATE DATABASE` y `USE`, que no corresponden al flujo de una conexión a una base existente de Azure SQL Database.
-2. En Render, configure `ConnectionStrings__TallerMecanico` únicamente en `TallerMecanico.Api`. Use el host `*.database.windows.net`, puerto 1433, el nombre de la base creada y una conexión cifrada con `Encrypt=True;TrustServerCertificate=False`. Introduzca usuario y contraseña solo en el panel de secretos de Render; no los guarde en Git.
-3. Permita en el firewall de Azure SQL los rangos de salida del servicio de Render en su región. Render los muestra en **Connect → Outbound**. No abra el acceso a toda Internet si puede limitarlo a esos rangos. Esta conexión aún no se ha probado contra Azure.
+El proyecto Neon existente usa la base `tallermecanico` en la rama `production`. **La base real todavía no se ha modificado ni consultado desde esta implementación.** Para preparar el esquema, seleccione esa rama y base en el SQL Editor de Neon, abra [`database/TallerMecanico.PostgreSQL.sql`](database/TallerMecanico.PostgreSQL.sql), pegue su contenido y ejecútelo una vez. El script crea `public."Clientes"`, `public."Vehiculos"` y `public."Usuarios"` con identificadores autogenerados, restricciones e índices, y los dos registros de ejemplo. Se puede repetir sin duplicar esos registros. Registre usuarios únicamente mediante la API.
+
+Si utiliza `psql` en lugar del SQL Editor, use la **cadena directa** de la rama `production` (host sin `-pooler`), con `sslmode=verify-full`, y ejecute desde la raíz: `psql "$NEON_DIRECT_URL" -v ON_ERROR_STOP=1 -f database/TallerMecanico.PostgreSQL.sql`. Mantenga esa URL fuera del repositorio. Para el tráfico normal de `TallerMecanico.Api` en Render, use el host **pooled** de Neon en `ConnectionStrings__TallerMecanico`, con formato Npgsql (`Host=...;Port=5432;Database=tallermecanico;Username=...;Password=...;SSL Mode=VerifyFull`); la aplicación obliga `VerifyFull` en producción aunque se omita en la cadena. No use `Trust Server Certificate=true`. Los scripts [SQL Server local](database/TallerMecanico.sql) y [Azure](database/TallerMecanico.Azure.sql) permanecen intactos.
 
 ### Tres servicios Docker en Render
 
-1. Publique primero el repositorio en GitHub tras revisar los cambios. Para cada servicio, en Render seleccione **New → Web Service**, el repositorio y **Language: Docker**. Deje **Root Directory** en la raíz del repositorio y configure **Docker Build Context Directory: `.`**. Indique el Dockerfile correspondiente: `TallerMecanico.Api/Dockerfile`, `RepuestosApi/Dockerfile` o `GatewayApi/Dockerfile`. No configure un comando de inicio distinto del `ENTRYPOINT` del Dockerfile.
-2. Despliegue primero `TallerMecanico.Api` y `RepuestosApi`. Configure `ASPNETCORE_ENVIRONMENT=Production` y los **mismos** `Jwt__Clave`, `Jwt__Emisor` y `Jwt__Audiencia` en ambos; configure además `Jwt__Minutos` y `ConnectionStrings__TallerMecanico` solo en la API original. Render suministra `PORT`; si lo fija manualmente, use el mismo valor que el puerto HTTP esperado por el servicio.
+1. Los cambios actuales están en la rama local `feature/semana-15-microservicios`; publique la nueva revisión en GitHub solo cuando decida hacerlo. Para cada servicio, en Render seleccione **New → Web Service**, el repositorio y **Language: Docker**. Deje **Root Directory** en la raíz del repositorio y configure **Docker Build Context Directory: `.`**. Indique el Dockerfile correspondiente: `TallerMecanico.Api/Dockerfile`, `RepuestosApi/Dockerfile` o `GatewayApi/Dockerfile`. No configure un comando de inicio distinto del `ENTRYPOINT` del Dockerfile.
+2. Despliegue primero `TallerMecanico.Api` y `RepuestosApi`. Configure `ASPNETCORE_ENVIRONMENT=Production` y los **mismos** `Jwt__Clave`, `Jwt__Emisor` y `Jwt__Audiencia` en ambos; configure además `Jwt__Minutos`, `Database__Provider=PostgreSQL` y `ConnectionStrings__TallerMecanico` solo en la API original. Render suministra `PORT`; si lo fija manualmente, use el mismo valor que el puerto HTTP esperado por el servicio.
 3. Tras obtener los nombres DNS HTTPS asignados a ambos servicios, cree `GatewayApi` con su Dockerfile. Configure los mismos valores JWT, `Downstream__TallerMecanico__Host` y `Downstream__Repuestos__Host` con **solo el host DNS** de cada servicio, y `Gateway__BaseUrl` con la URL HTTPS completa que Render asigne al gateway. El gateway utilizará HTTPS y puerto 443 para ambos destinos.
-4. Compruebe por la URL pública del gateway las rutas de [Semana15.http](Semana15.http), sustituyendo su variable `@gateway`. El script SQL de Azure no se ejecuta automáticamente desde los contenedores. No exponga las APIs internas como punto de entrada del cliente.
+4. Compruebe por la URL pública del gateway las rutas de [Semana15.http](Semana15.http), sustituyendo su variable `@gateway`. El script PostgreSQL no se ejecuta automáticamente desde los contenedores. No exponga las APIs internas como punto de entrada del cliente.
 
 La versión instalada de AutoMapper es **16.3.0**. Desde la versión 15 requiere licencia. El autor ofrece una licencia Community gratuita si se cumplen sus condiciones; el uso académico personal no exime automáticamente de registrarla, y el software institucional de una universidad no entra en esa modalidad. Obtenga una licencia válida antes de producción y configure `AUTOMAPPER_LICENSE_KEY` **solo en TallerMecanico.Api** desde las variables secretas de Render. AutoMapper la detecta sin cambiar el código. Sin licencia, emite una advertencia de inicio, aunque la aplicación continúa funcionando.
 
-No se han creado recursos ni realizado despliegues en Render o Azure.
+### Verificación de esta adaptación
+
+El script se ejecutó dos veces en un contenedor aislado PostgreSQL **17.12**: creó tres tablas, **7 índices**, **10 restricciones**, **3 columnas identity** y dos registros de ejemplo; la segunda ejecución no duplicó los registros. La API con `Database__Provider=PostgreSQL` devolvió **200** en las consultas; registro y login reales funcionaron; crear cliente y vehículo devolvió **201**, actualizar y eliminar con el rol adecuado **204**, y una eliminación sin el rol devolvió **403**. Con `Database__Provider=SqlServer`, las consultas de clientes y vehículos en SQL Server local devolvieron **200**. `dotnet restore`, `dotnet build` y el Dockerfile de TallerMecanico.Api finalizaron correctamente. No se conectó a la base Neon real y no se han creado recursos ni realizado despliegues en Render.
