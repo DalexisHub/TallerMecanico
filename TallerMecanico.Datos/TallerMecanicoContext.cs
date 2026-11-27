@@ -1,11 +1,9 @@
-using System;
-using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using TallerMecanico.Entidades;
 
 namespace TallerMecanico.Datos;
 
-public partial class TallerMecanicoContext : DbContext
+public class TallerMecanicoContext : DbContext
 {
     public TallerMecanicoContext(DbContextOptions<TallerMecanicoContext> options)
         : base(options)
@@ -52,9 +50,5 @@ public partial class TallerMecanicoContext : DbContext
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_Vehiculos_Clientes");
         });
-
-        OnModelCreatingPartial(modelBuilder);
     }
-
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
