@@ -11,11 +11,13 @@
 *.rsuser
 *.sln.docstates
 .DS_Store
+/evidencias-api/
 
 # Local configuration and credentials
 .env
 .env.*
 !*.env.example
+**/ocelot.Development.local.json
 **/appsettings.*.json
 **/secrets.json
 *.pfx

@@ -1,0 +1,109 @@
+@gateway = http://localhost:5100
+@repuestosDirecto = http://localhost:5056
+@correoRecepcion = recepcion@example.test
+@claveRecepcion = <clave-local-de-recepcion>
+@correoJefe = jefe@example.test
+@claveJefe = <clave-local-de-jefe>
+@tokenRecepcion = <token-devuelto-por-login-recepcion>
+@tokenJefe = <token-devuelto-por-login-jefe>
+@tokenFirmaInvalida = <token-bien-formado-con-firma-modificada>
+@clientePruebaId = <id-devuelto-al-crear-el-cliente-de-prueba>
+
+### Registro público (solo si la cuenta aún no existe; 201)
+POST {{gateway}}/gateway/auth/registro
+Content-Type: application/json
+
+{"correo":"{{correoRecepcion}}","clave":"{{claveRecepcion}}"}
+
+### Login público de Recepcionista (200; copiar token)
+POST {{gateway}}/gateway/auth/login
+Content-Type: application/json
+
+{"correo":"{{correoRecepcion}}","clave":"{{claveRecepcion}}"}
+
+### Registro público de la cuenta que será JefeTaller (201)
+POST {{gateway}}/gateway/auth/registro
+Content-Type: application/json
+
+{"correo":"{{correoJefe}}","clave":"{{claveJefe}}"}
+
+### Asignar JefeTaller solo a esta cuenta en dbo.Usuarios de TallerMecanico antes de iniciar sesión
+
+### Login público de JefeTaller (200; rol asignado administrativamente)
+POST {{gateway}}/gateway/auth/login
+Content-Type: application/json
+
+{"correo":"{{correoJefe}}","clave":"{{claveJefe}}"}
+
+### Consultas públicas (200 con SQL Server disponible)
+GET {{gateway}}/gateway/clientes
+
+### Lectura pública por ID (200 o 404)
+GET {{gateway}}/gateway/clientes/1
+
+### Consulta pública anidada (200 o 404)
+GET {{gateway}}/gateway/clientes/1/vehiculos
+
+### Filtros públicos de vehículos (200)
+GET {{gateway}}/gateway/vehiculos?marca=Toyota
+
+### Consulta pública de vehículo por ID (200 o 404)
+GET {{gateway}}/gateway/vehiculos/1
+
+### Perfil protegido (200)
+GET {{gateway}}/gateway/auth/perfil
+Authorization: Bearer {{tokenRecepcion}}
+
+### Catálogo protegido (200, ocho registros)
+GET {{gateway}}/gateway/repuestos
+Authorization: Bearer {{tokenRecepcion}}
+
+### Repuesto por ID (200)
+GET {{gateway}}/gateway/repuestos/1
+Authorization: Bearer {{tokenRecepcion}}
+
+### Repuesto inexistente (404)
+GET {{gateway}}/gateway/repuestos/999
+Authorization: Bearer {{tokenRecepcion}}
+
+### Repuestos sin token (401)
+GET {{gateway}}/gateway/repuestos
+
+### Repuestos con JWT de firma inválida (401)
+GET {{gateway}}/gateway/repuestos
+Authorization: Bearer {{tokenFirmaInvalida}}
+
+### Repuestos directo sin token (401)
+GET {{repuestosDirecto}}/api/repuestos
+
+### Crear sin token (401)
+POST {{gateway}}/gateway/clientes
+Content-Type: application/json
+
+{"nombre":"Cliente de prueba S15","documento":"S15-SIN-TOKEN"}
+
+### Borrar como Recepcionista (403, sin modificar datos)
+DELETE {{gateway}}/gateway/clientes/999
+Authorization: Bearer {{tokenRecepcion}}
+
+### Crear exclusivamente un cliente nuevo de prueba (201; copiar su ID)
+POST {{gateway}}/gateway/clientes
+Authorization: Bearer {{tokenJefe}}
+Content-Type: application/json
+
+{"nombre":"Cliente de prueba S15","documento":"S15-PRUEBA-001","telefono":"999000001"}
+
+### Eliminar exclusivamente el cliente de prueba creado arriba (204)
+DELETE {{gateway}}/gateway/clientes/{{clientePruebaId}}
+Authorization: Bearer {{tokenJefe}}
+
+### Ruta no configurada (404)
+GET {{gateway}}/gateway/no-existe
+
+### Detener RepuestosApi y ejecutar: Ocelot devuelve 502
+GET {{gateway}}/gateway/repuestos
+Authorization: Bearer {{tokenRecepcion}}
+
+### Con RepuestosApi detenido, TallerMecanico sigue respondiendo (200)
+GET {{gateway}}/gateway/auth/perfil
+Authorization: Bearer {{tokenRecepcion}}

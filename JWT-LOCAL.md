@@ -9,7 +9,7 @@ Ejecute `database/TallerMecanico.sql` en SQL Server. Registre dos cuentas median
 | POST auth/registro, POST auth/login | Sí | Sí | Sí |
 | GET Clientes, GET Vehiculos | Sí | Sí | Sí |
 | GET auth/perfil | 401 | Sí | Sí |
-| GET Clientes/{id}, GET Clientes/{id}/vehiculos, GET Vehiculos/{id} | 401 | Sí | Sí |
+| GET Clientes/{id}, GET Clientes/{id}/vehiculos, GET Vehiculos/{id} | Sí | Sí | Sí |
 | POST y PUT de Clientes y Vehiculos | 401 | Sí | Sí |
 | DELETE de Clientes y Vehiculos | 401 | 403 | Sí |
 

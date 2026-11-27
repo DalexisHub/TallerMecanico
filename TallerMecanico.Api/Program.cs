@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using TallerMecanico.Datos;
 using TallerMecanico.Datos.Interfaces;
 using TallerMecanico.Datos.Repositorios;
@@ -11,6 +12,8 @@ using TallerMecanico.Negocio.Interfaces;
 using TallerMecanico.Negocio.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
+if (int.TryParse(builder.Configuration["PORT"], out var port) && port is > 0 and <= 65535)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 var jwt = builder.Configuration.GetSection("Jwt").Get<JwtOpciones>() ?? new JwtOpciones();
@@ -28,8 +31,28 @@ builder.Services.AddSwaggerGen(options => {
 });
 builder.Services.AddScoped<IUsuarioRepositorio, UsuarioRepositorio>();
 builder.Services.AddScoped<IAuthServicio, AuthServicio>();
-builder.Services.AddDbContext<TallerMecanicoContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TallerMecanico")));
+var provider = builder.Configuration["Database:Provider"] ??
+    (builder.Environment.IsProduction() ? "PostgreSQL" : "SqlServer");
+var connectionString = builder.Configuration.GetConnectionString("TallerMecanico");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("Configure ConnectionStrings:TallerMecanico.");
+switch (provider.Trim().ToLowerInvariant())
+{
+    case "sqlserver":
+        builder.Services.AddDbContext<TallerMecanicoContext>(options => options.UseSqlServer(connectionString));
+        break;
+    case "postgresql":
+    case "postgres":
+        var postgres = new NpgsqlConnectionStringBuilder(connectionString);
+        if (builder.Environment.IsProduction())
+        {
+            postgres.SslMode = SslMode.VerifyFull;
+        }
+        builder.Services.AddDbContext<TallerMecanicoContext>(options => options.UseNpgsql(postgres.ConnectionString));
+        break;
+    default:
+        throw new InvalidOperationException("Database:Provider debe ser SqlServer o PostgreSQL.");
+}
 builder.Services.AddScoped<IClienteRepositorio, ClienteRepositorio>();
 builder.Services.AddScoped<IVehiculoRepositorio, VehiculoRepositorio>();
 builder.Services.AddScoped<IClienteServicio, ClienteServicio>();
@@ -43,7 +66,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

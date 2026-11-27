@@ -24,6 +24,7 @@ public class VehiculosController(IVehiculoServicio servicio) : ControllerBase
         return Ok(await servicio.ListarAsync(clienteId, placa, marca));
     }
 
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(VehiculoDto), 200)]
     [ProducesResponseType(typeof(ProblemDetails), 404)]
